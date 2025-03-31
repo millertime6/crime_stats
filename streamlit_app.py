@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 # import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -11,7 +11,7 @@ from sklearn.pipeline import make_pipeline
 from category_encoders import TargetEncoder
 
 # Load the data
-@st.cache
+@st.cache_data
 def load_data():
     data = pd.read_csv('BPD_arrests.csv')
     return data
@@ -68,13 +68,19 @@ st.write(f"Model Accuracy: {accuracy:.2f}")
 st.header("Predict Crime Type")
 with st.form("crime_prediction_form"):
     age_input = st.number_input("Offender Age", min_value=10, max_value=100, value=30)
-    gender_input = st.selectbox("Gender", data['Gender'].unique())
-    district_input = st.selectbox("District", data['District'].unique())
-    neighborhood_input = st.selectbox("Neighborhood", data['Neighborhood'].unique())
-    hour_input = st.slider("Hour of Arrest (0–23)", 0, 23, 12)
-    day_of_week_input = st.selectbox("Day of Week (0=Mon)", list(range(7)))
-    month_input = st.selectbox("Month", list(range(1, 13)))
-    time_of_day_input = st.selectbox("Time of Day", data['TimeOfDay'].unique())
+
+    gender_display = st.selectbox("Gender", ['Male', 'Female'])
+    gender_input = 'M' if gender_display == 'Male' else 'F'
+
+    district_input = st.selectbox("District", sorted(data['District'].unique()))
+    neighborhood_input = st.selectbox("Neighborhood", sorted(data['Neighborhood'].unique()))
+
+    hour_input = st.number_input("Hour of Arrest (1–24)", min_value=1, max_value=24, value=12)
+    day_of_week_input = st.number_input("Day of Week (1=Mon)", min_value=1, max_value=7, value=1)
+    month_input = st.number_input("Month", min_value=1, max_value=12, value=1)
+
+    # Adjust TimeOfDay bin logic if needed
+    time_of_day_input = pd.cut([hour_input], bins=[0, 6, 12, 18, 24], labels=['Night', 'Morning', 'Afternoon', 'Evening'], right=False)[0]
 
     submitted = st.form_submit_button("Predict")
 
@@ -85,7 +91,7 @@ with st.form("crime_prediction_form"):
             'District': [district_input],
             'Neighborhood': [neighborhood_input],
             'Hour': [hour_input],
-            'DayOfWeek': [day_of_week_input],
+            'DayOfWeek': [day_of_week_input - 1],
             'Month': [month_input],
             'TimeOfDay': [time_of_day_input]
         })
