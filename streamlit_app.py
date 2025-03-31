@@ -21,6 +21,15 @@ data = load_data()
 # Drop rows with missing target values or essential features
 data = data.dropna(subset=['IncidentOffence', 'ArrestDateTime', 'Age', 'Gender', 'District'])
 
+# Strip whitespace from relevant columns
+data['IncidentOffence'] = data['IncidentOffence'].str.strip()
+data['District'] = data['District'].str.strip()
+data['Neighborhood'] = data['Neighborhood'].str.strip()
+
+# Store original categorical values for UI before encoding
+district_options = sorted(data['District'].unique())
+neighborhood_options = sorted(data['Neighborhood'].fillna('Unknown').unique())
+
 # Fill or drop other missing values
 data['Neighborhood'] = data['Neighborhood'].fillna('Unknown')
 data['ChargeDescription'] = data['ChargeDescription'].fillna('Unknown')
@@ -72,8 +81,8 @@ with st.form("crime_prediction_form"):
     gender_display = st.selectbox("Gender", ['Male', 'Female'])
     gender_input = 'M' if gender_display == 'Male' else 'F'
 
-    district_input = st.selectbox("District", sorted(data['District'].unique()))
-    neighborhood_input = st.selectbox("Neighborhood", sorted(data['Neighborhood'].unique()))
+    district_input = st.selectbox("District", district_options)
+    neighborhood_input = st.selectbox("Neighborhood", neighborhood_options)
 
     hour_input = st.number_input("Hour of Arrest (1–24)", min_value=1, max_value=24, value=12)
     day_of_week_input = st.number_input("Day of Week (1=Mon)", min_value=1, max_value=7, value=1)
@@ -97,7 +106,5 @@ with st.form("crime_prediction_form"):
         })
 
         input_data[cat_features] = encoder.transform(input_data[cat_features])
-        prediction_encoded = model.predict(input_data)[0]
-        prediction_label = label_encoder.inverse_transform([prediction_encoded])[0]
-
+        prediction_label = model.predict(input_data)[0]
         st.success(f"Predicted Crime Type: {prediction_label}")
