@@ -52,18 +52,46 @@ target = 'IncidentOffence'
 # Filter only necessary columns and drop any remaining NaNs
 data_model = data[features + [target]].dropna()
 
-#create a normal distribution of the data using age 
-sns.histplot(data_model['Age'], kde=True)
-st.pyplot()
+# Train a Random Forest Classifier
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(data_model[features], data_model[target], test_size=0.2, random_state=42)
+model.fit(X_train, y_train)
 
-# build some summary statistics
-st.write(data_model.describe())
-print(data_model.describe())
+# Evaluate the model
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
 
-X = data_model[features]
-y = data_model[target]
+# Print evaluation result
+st.write(f"Model Accuracy: {accuracy:.2f}")
 
-# Split into train and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Prediction form
+st.header("Predict Crime Type")
+with st.form("crime_prediction_form"):
+    age_input = st.number_input("Offender Age", min_value=10, max_value=100, value=30)
+    gender_input = st.selectbox("Gender", data['Gender'].unique())
+    district_input = st.selectbox("District", data['District'].unique())
+    neighborhood_input = st.selectbox("Neighborhood", data['Neighborhood'].unique())
+    hour_input = st.slider("Hour of Arrest (0–23)", 0, 23, 12)
+    day_of_week_input = st.selectbox("Day of Week (0=Mon)", list(range(7)))
+    month_input = st.selectbox("Month", list(range(1, 13)))
+    time_of_day_input = st.selectbox("Time of Day", data['TimeOfDay'].unique())
 
+    submitted = st.form_submit_button("Predict")
 
+    if submitted:
+        input_data = pd.DataFrame({
+            'Age': [age_input],
+            'Gender': [gender_input],
+            'District': [district_input],
+            'Neighborhood': [neighborhood_input],
+            'Hour': [hour_input],
+            'DayOfWeek': [day_of_week_input],
+            'Month': [month_input],
+            'TimeOfDay': [time_of_day_input]
+        })
+
+        input_data[cat_features] = encoder.transform(input_data[cat_features])
+        prediction_encoded = model.predict(input_data)[0]
+        prediction_label = label_encoder.inverse_transform([prediction_encoded])[0]
+
+        st.success(f"Predicted Crime Type: {prediction_label}")
